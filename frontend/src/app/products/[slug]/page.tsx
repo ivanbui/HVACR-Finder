@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getProduct } from "@/lib/api";
 import SellerActionMenu from "@/components/SellerActionMenu";
+import { StartConversationButton } from "@/modules/messages";
 
 function formatVnd(value?: number | null) {
   if (!value) return "Liên hệ";
@@ -177,6 +178,27 @@ export default async function ProductDetail({
             {product.offers.length} người bán đang có
           </h2>
         </div>
+
+        <StartConversationButton
+          user={{
+            id: "buyer-demo",
+            name: "Buyer Demo",
+          }}
+          context={{
+            buyerId: "buyer-demo",
+            sellerId: "seller-demo",
+            productId: String(product.id || product.slug),
+          }}
+          snapshot={{
+            productId: String(product.id || product.slug),
+            productName: product.name,
+            productImage: product.image_url || "/demo-compressor.jpeg",
+            sellerId: "seller-demo",
+            sellerName: "MIANMI",
+            priceText: undefined,
+            subtitle: undefined,
+          }}
+        />
 
         <div className="mt-3 grid gap-4">
           {product.offers.map((offer) => {
