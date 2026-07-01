@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import type { StreamChat } from "stream-chat";
-import { getBrowserStreamClient, disconnectBrowserStreamClient } from "../services/stream-client";
+import { getBrowserStreamClient } from "../services/stream-client";
 import { requestStreamToken } from "../services/stream-auth";
 import type { ChatUser, MessagesContextValue } from "../types";
 
@@ -36,7 +36,9 @@ export function ChatProvider({ user, children }: ChatProviderProps) {
         const tokenData = await requestStreamToken(user);
         const streamClient = getBrowserStreamClient(tokenData.apiKey);
 
-        await streamClient.connectUser(tokenData.user, tokenData.token);
+        if (streamClient.userID !== tokenData.user.id) {
+          await streamClient.connectUser(tokenData.user, tokenData.token);
+        }
 
         if (mounted) {
           setClient(streamClient);
@@ -56,7 +58,9 @@ export function ChatProvider({ user, children }: ChatProviderProps) {
 
     return () => {
       mounted = false;
-      disconnectBrowserStreamClient();
+      // Không disconnect ở đây.
+      // Nếu disconnect khi chuyển trang Product -> Messages,
+      // Stream client sẽ mất token và gây lỗi sendMessage.
     };
   }, [user.id, user.name, user.image]);
 

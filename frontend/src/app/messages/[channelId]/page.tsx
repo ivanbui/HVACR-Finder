@@ -25,7 +25,7 @@ function MessageDetailScreen() {
   const { channel, isLoading, error } = useChannelById(channelId);
 
   const { isOnline } = useOnlineStatus({
-    channel: channel as Channel,
+    channel,
     currentUserId: demoBuyer.id,
   });
 
