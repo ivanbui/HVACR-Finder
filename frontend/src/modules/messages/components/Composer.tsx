@@ -1,21 +1,49 @@
 "use client";
 
-export function Composer() {
+import { useState } from "react";
+
+type ComposerProps = {
+  disabled?: boolean;
+  onSend: (text: string) => Promise<void> | void;
+};
+
+export function Composer({ disabled = false, onSend }: ComposerProps) {
+  const [text, setText] = useState("");
+
+  async function handleSend() {
+    const body = text.trim();
+    if (!body || disabled) return;
+
+    setText("");
+    await onSend(body);
+  }
+
   return (
-    <div className="border-t border-white/10 p-3">
-      <div className="flex items-center gap-2 rounded-2xl bg-white/[0.06] p-2">
-        <input
-          className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none placeholder:text-white/35"
+    <footer className="border-t border-white/10 bg-[#151a1f] px-3 py-3">
+      <div className="flex items-end gap-2">
+        <textarea
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          rows={1}
+          disabled={disabled}
           placeholder="Nhập tin nhắn..."
-          disabled
+          className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl bg-[#20262b] px-4 py-3 text-[14px] outline-none placeholder:text-slate-500 disabled:opacity-50"
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              handleSend();
+            }
+          }}
         />
+
         <button
-          className="rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white/60"
-          disabled
+          onClick={handleSend}
+          disabled={disabled || !text.trim()}
+          className="h-11 rounded-2xl bg-sky-500 px-4 text-sm font-black text-white disabled:opacity-40"
         >
           Gửi
         </button>
       </div>
-    </div>
+    </footer>
   );
 }
