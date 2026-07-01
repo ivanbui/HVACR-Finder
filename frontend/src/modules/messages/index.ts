@@ -10,6 +10,7 @@ export * from "./components/OnlineBadge";
 
 export * from "./hooks/useChat";
 export * from "./hooks/useConversation";
+export * from "./hooks/useInbox";
 
 export * from "./services/stream-client";
 export * from "./services/stream-auth";
