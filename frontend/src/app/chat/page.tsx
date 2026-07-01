@@ -1,13 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { StreamChat, Channel as StreamChannel } from "stream-chat";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import type { Channel, MessageResponse } from "stream-chat";
+import {
+  ChatProvider,
+  useChat,
+  useConversation,
+  type ChatUser,
+  type ProductContextData,
+} from "@/modules/messages";
 
-type ChatUser = {
-  id: string;
-  name: string;
-  image?: string;
+const demoBuyer: ChatUser = {
+  id: "buyer-demo",
+  name: "Buyer Demo",
+};
+
+const demoSeller = {
+  id: "seller-demo",
+  name: "MIANMI",
+};
+
+const demoProduct: ProductContextData = {
+  productId: "kulthorn-wj9460ek-sa",
+  productName: "Kulthorn WJ9460EK-SA",
+  productImage: "/demo-compressor.jpeg",
+  sellerId: demoSeller.id,
+  sellerName: demoSeller.name,
+  priceText: "4.200.000đ",
 };
 
 type UiMessage = {
@@ -18,78 +38,40 @@ type UiMessage = {
   };
 };
 
-export default function ChatPage() {
-  const [client, setClient] = useState<StreamChat | null>(null);
-  const [channel, setChannel] = useState<StreamChannel | null>(null);
+function ChatScreen() {
+  const { client, isConnecting, error: chatError } = useChat();
+
+  const {
+    channel,
+    isLoading,
+    error: conversationError,
+  } = useConversation({
+    buyerId: demoBuyer.id,
+    sellerId: demoSeller.id,
+    product: demoProduct,
+  });
+
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let chatClient: StreamChat | null = null;
-    let chatChannel: StreamChannel | null = null;
-    let isMounted = true;
+    if (!channel) return;
 
-    async function initChat() {
-      try {
-        const res = await fetch("/api/stream-token");
-        const data = await res.json();
+    setMessages((channel.state.messages || []) as UiMessage[]);
 
-        chatClient = StreamChat.getInstance(data.apiKey);
-        await chatClient.connectUser(data.user as ChatUser, data.token);
+    const handleNewMessage = (event: { message?: MessageResponse }) => {
+      if (!event.message) return;
 
-        const channelData = {
-          members: ["buyer-demo", "seller-demo"],
-          name: "Kulthorn WJ9460EK-SA",
-          product_name: "Kulthorn WJ9460EK-SA",
-          product_price: "4.200.000đ",
-          seller_name: "MIANMI",
-        } as Record<string, unknown>;
+      setMessages((prev) => [...prev, event.message as UiMessage]);
+    };
 
-        chatChannel = chatClient.channel(
-          "messaging",
-          "hvacr-product-demo",
-          channelData,
-        );
-
-        await chatChannel.watch();
-
-        if (!isMounted) return;
-
-        setClient(chatClient);
-        setChannel(chatChannel);
-        setMessages((chatChannel.state.messages || []) as UiMessage[]);
-        setLoading(false);
-
-        chatChannel.on("message.new", (event) => {
-          if (event.message) {
-            setMessages((prev) => [...prev, event.message as UiMessage]);
-          }
-        });
-      } catch (error) {
-        console.error("Init chat failed:", error);
-
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    initChat();
+    channel.on("message.new", handleNewMessage);
 
     return () => {
-      isMounted = false;
-
-      if (chatChannel) {
-        chatChannel.stopWatching();
-      }
-
-      if (chatClient) {
-        chatClient.disconnectUser();
-      }
+      channel.off("message.new", handleNewMessage);
     };
-  }, []);
+  }, [channel]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -101,15 +83,28 @@ export default function ChatPage() {
     const body = text.trim();
     setText("");
 
-    await channel.sendMessage({
+    await (channel as Channel).sendMessage({
       text: body,
     });
   }
 
-  if (loading || !client || !channel) {
+  if (isConnecting || isLoading || !client || !channel) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f1316] text-white">
         Đang mở chat...
+      </main>
+    );
+  }
+
+  if (chatError || conversationError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0f1316] px-6 text-center text-white">
+        <div>
+          <p className="text-lg font-black">Không thể mở chat</p>
+          <p className="mt-2 text-sm text-slate-400">
+            {chatError || conversationError}
+          </p>
+        </div>
       </main>
     );
   }
@@ -132,7 +127,9 @@ export default function ChatPage() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="line-clamp-1 text-[16px] font-black">MIANMI</h1>
+              <h1 className="line-clamp-1 text-[16px] font-black">
+                {demoSeller.name}
+              </h1>
               <p className="text-[12px] text-slate-500">Đang hỏi sản phẩm</p>
             </div>
 
@@ -142,20 +139,20 @@ export default function ChatPage() {
           <div className="mt-3 rounded-2xl bg-white/5 p-3">
             <div className="flex gap-3">
               <img
-                src="/demo-compressor.jpeg"
-                alt="Kulthorn WJ9460EK-SA"
+                src={demoProduct.productImage}
+                alt={demoProduct.productName}
                 className="h-16 w-14 shrink-0 object-contain"
               />
 
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-1 text-[14px] font-black text-sky-400">
-                  Kulthorn WJ9460EK-SA
+                  {demoProduct.productName}
                 </p>
                 <p className="mt-1 text-[12px] text-slate-400">
                   R22 | 220V/50Hz | 1HP
                 </p>
                 <p className="mt-1 text-[15px] font-black text-white">
-                  4.200.000đ
+                  {demoProduct.priceText}
                 </p>
               </div>
             </div>
@@ -171,7 +168,7 @@ export default function ChatPage() {
           )}
 
           {messages.map((message, index) => {
-            const isMine = message.user?.id === "buyer-demo";
+            const isMine = message.user?.id === demoBuyer.id;
 
             return (
               <div
@@ -198,13 +195,13 @@ export default function ChatPage() {
           <div className="flex items-end gap-2">
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(event) => setText(event.target.value)}
               rows={1}
               placeholder="Nhập tin nhắn..."
               className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl bg-[#20262b] px-4 py-3 text-[14px] outline-none placeholder:text-slate-500"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
                   sendMessage();
                 }
               }}
@@ -220,5 +217,13 @@ export default function ChatPage() {
         </footer>
       </section>
     </main>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <ChatProvider user={demoBuyer}>
+      <ChatScreen />
+    </ChatProvider>
   );
 }
