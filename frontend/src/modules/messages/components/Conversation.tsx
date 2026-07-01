@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Channel, MessageResponse } from "stream-chat";
+import { useTyping } from "../hooks/useTyping";
 import { Composer } from "./Composer";
 import { MessageBubble } from "./MessageBubble";
+import { TypingIndicator } from "./TypingIndicator";
 
 type UiMessage = {
   id?: string;
@@ -22,6 +24,11 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const { isOtherTyping, startTyping, stopTyping } = useTyping({
+    channel,
+    currentUserId,
+  });
 
   useEffect(() => {
     setMessages((channel.state.messages || []) as UiMessage[]);
@@ -46,11 +53,12 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isOtherTyping]);
 
   async function handleSend(text: string) {
     try {
       setIsSending(true);
+      await stopTyping();
 
       await channel.sendMessage({
         text,
@@ -81,7 +89,14 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
         <div ref={bottomRef} />
       </div>
 
-      <Composer disabled={isSending} onSend={handleSend} />
+      <TypingIndicator visible={isOtherTyping} />
+
+      <Composer
+        disabled={isSending}
+        onSend={handleSend}
+        onTypingStart={startTyping}
+        onTypingStop={stopTyping}
+      />
     </section>
   );
 }

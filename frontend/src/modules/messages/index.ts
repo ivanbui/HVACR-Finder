@@ -11,6 +11,8 @@ export * from "./components/OnlineBadge";
 export * from "./hooks/useChat";
 export * from "./hooks/useConversation";
 export * from "./hooks/useInbox";
+export * from "./hooks/useTyping";
+export * from "./hooks/useOnlineStatus";
 
 export * from "./services/stream-client";
 export * from "./services/stream-auth";

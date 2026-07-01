@@ -2,10 +2,18 @@
 
 type TypingIndicatorProps = {
   visible?: boolean;
+  text?: string;
 };
 
-export function TypingIndicator({ visible = false }: TypingIndicatorProps) {
+export function TypingIndicator({
+  visible = false,
+  text = "Đang nhập...",
+}: TypingIndicatorProps) {
   if (!visible) return null;
 
-  return <p className="px-4 py-2 text-xs text-white/40">Đang nhập...</p>;
+  return (
+    <div className="px-4 pb-2 text-[12px] text-slate-500">
+      {text}
+    </div>
+  );
 }

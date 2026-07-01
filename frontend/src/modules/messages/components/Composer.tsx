@@ -5,9 +5,16 @@ import { useState } from "react";
 type ComposerProps = {
   disabled?: boolean;
   onSend: (text: string) => Promise<void> | void;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
 };
 
-export function Composer({ disabled = false, onSend }: ComposerProps) {
+export function Composer({
+  disabled = false,
+  onSend,
+  onTypingStart,
+  onTypingStop,
+}: ComposerProps) {
   const [text, setText] = useState("");
 
   async function handleSend() {
@@ -15,7 +22,18 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
     if (!body || disabled) return;
 
     setText("");
+    onTypingStop?.();
     await onSend(body);
+  }
+
+  function handleChange(value: string) {
+    setText(value);
+
+    if (value.trim()) {
+      onTypingStart?.();
+    } else {
+      onTypingStop?.();
+    }
   }
 
   return (
@@ -23,7 +41,8 @@ export function Composer({ disabled = false, onSend }: ComposerProps) {
       <div className="flex items-end gap-2">
         <textarea
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => handleChange(event.target.value)}
+          onBlur={() => onTypingStop?.()}
           rows={1}
           disabled={disabled}
           placeholder="Nhập tin nhắn..."

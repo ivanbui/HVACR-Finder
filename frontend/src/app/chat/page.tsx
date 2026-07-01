@@ -10,6 +10,7 @@ import {
   getProductSnapshotFromChannel,
   useChat,
   useConversation,
+  useOnlineStatus,
   type ChatUser,
   type ProductSnapshot,
   type TradingContext,
@@ -54,6 +55,11 @@ function ChatScreen() {
     ? getProductSnapshotFromChannel(currentChannel)
     : demoProductSnapshot;
 
+  const { isOnline } = useOnlineStatus({
+    channel: currentChannel as Channel,
+    currentUserId: demoBuyer.id,
+  });
+
   useEffect(() => {
     if (!defaultChannel || activeChannel) return;
     setActiveChannel(defaultChannel as Channel);
@@ -94,6 +100,7 @@ function ChatScreen() {
           <ConversationHeader
             sellerName={currentProduct.sellerName}
             product={currentProduct}
+            isOnline={isOnline}
           />
 
           <Conversation channel={currentChannel} currentUserId={demoBuyer.id} />

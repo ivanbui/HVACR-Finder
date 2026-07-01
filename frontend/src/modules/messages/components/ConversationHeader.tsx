@@ -1,19 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import type { ProductSnapshot } from "../types";
+import { OnlineBadge } from "./OnlineBadge";
 import { ProductContext } from "./ProductContext";
+import type { ProductSnapshot } from "../types";
 
 type ConversationHeaderProps = {
   sellerName: string;
   sellerImage?: string;
   product: ProductSnapshot;
+  isOnline?: boolean;
 };
 
 export function ConversationHeader({
   sellerName,
   sellerImage,
   product,
+  isOnline = false,
 }: ConversationHeaderProps) {
   return (
     <header className="border-b border-white/10 bg-[#151a1f] px-4 py-3">
@@ -35,7 +38,7 @@ export function ConversationHeader({
 
         <div className="min-w-0 flex-1">
           <h1 className="line-clamp-1 text-[16px] font-black">{sellerName}</h1>
-          <p className="text-[12px] text-slate-500">Đang hỏi sản phẩm</p>
+          <OnlineBadge isOnline={isOnline} />
         </div>
 
         <button className="text-xl text-slate-400">⋯</button>
