@@ -1,31 +1,13 @@
 "use client";
 
 import type { Channel } from "stream-chat";
+import { getProductSnapshotFromChannel } from "../services/trading-context";
 import { useInbox } from "../hooks/useInbox";
 
 type InboxProps = {
   activeChannelId?: string;
   onSelectChannel?: (channel: Channel) => void;
 };
-
-function getChannelTitle(channel: Channel) {
-  const data = channel.data as Record<string, unknown>;
-  return (
-    String(data.product_name || "") ||
-    String(data.name || "") ||
-    "Cuộc trò chuyện"
-  );
-}
-
-function getSellerName(channel: Channel) {
-  const data = channel.data as Record<string, unknown>;
-  return String(data.seller_name || "Người bán");
-}
-
-function getProductImage(channel: Channel) {
-  const data = channel.data as Record<string, unknown>;
-  return String(data.product_image || "/demo-compressor.jpeg");
-}
 
 function getLastMessage(channel: Channel) {
   const lastMessage = channel.state.messages[channel.state.messages.length - 1];
@@ -71,11 +53,7 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
           </div>
         )}
 
-        {error && (
-          <div className="px-4 py-5 text-sm text-red-300">
-            {error}
-          </div>
-        )}
+        {error && <div className="px-4 py-5 text-sm text-red-300">{error}</div>}
 
         {!isLoading && !error && channels.length === 0 && (
           <div className="px-4 py-5 text-sm leading-6 text-slate-500">
@@ -86,6 +64,7 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
         {!isLoading &&
           !error &&
           channels.map((channel) => {
+            const product = getProductSnapshotFromChannel(channel);
             const unread = getUnread(channel);
             const isActive = activeChannelId === channel.id;
 
@@ -99,15 +78,15 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
                 }`}
               >
                 <img
-                  src={getProductImage(channel)}
-                  alt={getChannelTitle(channel)}
+                  src={product.productImage || "/demo-compressor.jpeg"}
+                  alt={product.productName}
                   className="h-12 w-12 shrink-0 rounded-2xl bg-white object-contain p-1"
                 />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="line-clamp-1 text-[14px] font-black text-white">
-                      {getChannelTitle(channel)}
+                      {product.productName}
                     </p>
                     <span className="shrink-0 text-[11px] text-slate-500">
                       {formatTime(channel)}
@@ -115,7 +94,7 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
                   </div>
 
                   <p className="mt-0.5 line-clamp-1 text-[12px] text-slate-500">
-                    {getSellerName(channel)}
+                    {product.sellerName}
                   </p>
 
                   <div className="mt-1 flex items-center justify-between gap-2">

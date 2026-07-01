@@ -3,16 +3,15 @@
 import { useEffect, useState } from "react";
 import type { Channel } from "stream-chat";
 import { getTradingChannel } from "../services/stream-channel";
-import type { ProductContextData } from "../types";
+import type { ProductSnapshot, TradingContext } from "../types";
 import { useChat } from "./useChat";
 
 type UseConversationParams = {
-  buyerId: string;
-  sellerId: string;
-  product: ProductContextData;
+  context: TradingContext;
+  snapshot?: ProductSnapshot;
 };
 
-export function useConversation({ buyerId, sellerId, product }: UseConversationParams) {
+export function useConversation({ context, snapshot }: UseConversationParams) {
   const { client } = useChat();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,9 +29,8 @@ export function useConversation({ buyerId, sellerId, product }: UseConversationP
 
         const tradingChannel = await getTradingChannel({
           client,
-          buyerId,
-          sellerId,
-          product,
+          context,
+          snapshot,
         });
 
         if (mounted) {
@@ -54,7 +52,17 @@ export function useConversation({ buyerId, sellerId, product }: UseConversationP
     return () => {
       mounted = false;
     };
-  }, [client, buyerId, sellerId, product.productId]);
+  }, [
+    client,
+    context.buyerId,
+    context.sellerId,
+    context.productId,
+    snapshot?.productName,
+    snapshot?.productImage,
+    snapshot?.sellerName,
+    snapshot?.priceText,
+    snapshot?.subtitle,
+  ]);
 
   return {
     channel,

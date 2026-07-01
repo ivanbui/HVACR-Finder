@@ -6,14 +6,23 @@ export type ChatUser = {
   image?: string;
 };
 
-export type ProductContextData = {
+export type TradingContext = {
+  buyerId: string;
+  sellerId: string;
+  productId: string;
+};
+
+export type ProductSnapshot = {
   productId: string;
   productName: string;
   productImage?: string;
   sellerId: string;
   sellerName: string;
   priceText?: string;
+  subtitle?: string;
 };
+
+export type ProductContextData = ProductSnapshot;
 
 export type ChatTokenResponse = {
   apiKey: string;

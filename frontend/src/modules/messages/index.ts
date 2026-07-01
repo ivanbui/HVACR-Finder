@@ -15,5 +15,6 @@ export * from "./hooks/useInbox";
 export * from "./services/stream-client";
 export * from "./services/stream-auth";
 export * from "./services/stream-channel";
+export * from "./services/trading-context";
 
 export * from "./types";
