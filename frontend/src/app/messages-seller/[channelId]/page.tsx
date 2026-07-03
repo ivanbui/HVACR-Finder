@@ -1,20 +1,21 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import type { Channel } from "stream-chat";
 import {
   ChatProvider,
   Conversation,
   ConversationHeader,
   Inbox,
-  getCurrentChatUser,
   getProductSnapshotFromChannel,
+  getSellerTestUser,
   useChannelById,
   useOnlineStatus,
 } from "@/modules/messages";
 
-const currentUser = getCurrentChatUser();
+const sellerUser = getSellerTestUser();
 
-function MessageDetailScreen() {
+function SellerMessageDetailScreen() {
   const params = useParams<{ channelId: string }>();
   const channelId = params.channelId;
 
@@ -22,13 +23,13 @@ function MessageDetailScreen() {
 
   const { isOnline } = useOnlineStatus({
     channel,
-    currentUserId: currentUser.id,
+    currentUserId: sellerUser.id,
   });
 
   if (isLoading || !channel) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f1316] text-white">
-        Đang mở hội thoại...
+        Seller đang mở hội thoại...
       </main>
     );
   }
@@ -37,7 +38,7 @@ function MessageDetailScreen() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f1316] px-6 text-center text-white">
         <div>
-          <p className="text-lg font-black">Không thể mở hội thoại</p>
+          <p className="text-lg font-black">Seller không thể mở hội thoại</p>
           <p className="mt-2 text-sm text-slate-400">{error}</p>
         </div>
       </main>
@@ -55,22 +56,22 @@ function MessageDetailScreen() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <ConversationHeader
-            sellerName={product.sellerName}
+            sellerName="Buyer Demo"
             product={product}
             isOnline={isOnline}
           />
 
-          <Conversation channel={channel} currentUserId={currentUser.id} />
+          <Conversation channel={channel as Channel} currentUserId={sellerUser.id} />
         </div>
       </section>
     </main>
   );
 }
 
-export default function MessageDetailPage() {
+export default function SellerMessageDetailPage() {
   return (
-    <ChatProvider user={currentUser}>
-      <MessageDetailScreen />
+    <ChatProvider user={sellerUser}>
+      <SellerMessageDetailScreen />
     </ChatProvider>
   );
 }

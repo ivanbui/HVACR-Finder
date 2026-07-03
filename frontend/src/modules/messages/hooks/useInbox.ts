@@ -34,7 +34,8 @@ export function useInbox() {
         {
           watch: true,
           state: true,
-          limit: 30,
+          presence: true,
+          limit: 50,
         },
       );
 
@@ -60,11 +61,15 @@ export function useInbox() {
     client.on("message.new", refresh);
     client.on("notification.message_new", refresh);
     client.on("notification.mark_read", refresh);
+    client.on("user.presence.changed", refresh);
+    client.on("connection.changed", refresh);
 
     return () => {
       client.off("message.new", refresh);
       client.off("notification.message_new", refresh);
       client.off("notification.mark_read", refresh);
+      client.off("user.presence.changed", refresh);
+      client.off("connection.changed", refresh);
     };
   }, [client, loadInbox]);
 

@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { getProduct } from "@/lib/api";
 import SellerActionMenu from "@/components/SellerActionMenu";
-import { StartConversationButton } from "@/modules/messages";
+
+import {
+  StartConversationButton,
+  buildProductTradingPayload,
+  getCurrentChatUser,
+} from "@/modules/messages";
 
 function formatVnd(value?: number | null) {
   if (!value) return "Liên hệ";
@@ -79,6 +84,11 @@ export default async function ProductDetail({
   const { slug } = await params;
   const product = await getProduct(slug);
   const mainImage = productImage(product.name, product.image_url);
+  const currentUser = getCurrentChatUser();
+  const tradingPayload = buildProductTradingPayload({
+    product,
+    buyerId: currentUser.id,
+  });
 
   return (
     <main className="min-h-screen bg-[#15191d] text-white">
@@ -180,24 +190,9 @@ export default async function ProductDetail({
         </div>
 
         <StartConversationButton
-          user={{
-            id: "buyer-demo",
-            name: "Buyer Demo",
-          }}
-          context={{
-            buyerId: "buyer-demo",
-            sellerId: "seller-demo",
-            productId: String(product.id || product.slug),
-          }}
-          snapshot={{
-            productId: String(product.id || product.slug),
-            productName: product.name,
-            productImage: product.image_url || "/demo-compressor.jpeg",
-            sellerId: "seller-demo",
-            sellerName: "MIANMI",
-            priceText: undefined,
-            subtitle: undefined,
-          }}
+          user={currentUser}
+          context={tradingPayload.context}
+          snapshot={tradingPayload.snapshot}
         />
 
         <div className="mt-3 grid gap-4">

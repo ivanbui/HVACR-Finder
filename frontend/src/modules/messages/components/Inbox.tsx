@@ -1,41 +1,73 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { Channel } from "stream-chat";
-import { getProductSnapshotFromChannel } from "../services/trading-context";
+import { useChat } from "../hooks/useChat";
 import { useInbox } from "../hooks/useInbox";
+import { mapChannelToInboxItem } from "../services/inbox-mapper";
+import { InboxItem } from "./InboxItem";
 
 type InboxProps = {
   activeChannelId?: string;
   onSelectChannel?: (channel: Channel) => void;
 };
 
-function getLastMessage(channel: Channel) {
-  const lastMessage = channel.state.messages[channel.state.messages.length - 1];
-  return lastMessage?.text || "Chưa có tin nhắn.";
-}
+type InboxFilter = "all" | "unread" | "online";
 
-function getUnread(channel: Channel) {
-  if (typeof channel.countUnread === "function") {
-    return channel.countUnread();
-  }
-
-  return 0;
-}
-
-function formatTime(channel: Channel) {
-  const lastMessage = channel.state.messages[channel.state.messages.length - 1];
-  const date = lastMessage?.created_at;
-
-  if (!date) return "";
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
+  const { currentUser } = useChat();
   const { channels, isLoading, error } = useInbox();
+
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<InboxFilter>("all");
+
+  const items = useMemo(() => {
+    if (!currentUser) return [];
+
+    return channels.map((channel) =>
+      mapChannelToInboxItem(channel, currentUser.id),
+    );
+  }, [channels, currentUser]);
+
+  const counts = useMemo(() => {
+    return {
+      all: items.length,
+      unread: items.filter((item) => item.unreadCount > 0).length,
+      online: items.filter((item) => item.isOnline).length,
+    };
+  }, [items]);
+
+  const visibleItems = useMemo(() => {
+    const keyword = normalizeText(query.trim());
+
+    return items.filter((item) => {
+      const matchFilter =
+        filter === "all" ||
+        (filter === "unread" && item.unreadCount > 0) ||
+        (filter === "online" && item.isOnline);
+
+      if (!matchFilter) return false;
+
+      if (!keyword) return true;
+
+      const searchable = normalizeText(
+        [
+          item.otherUserName,
+          item.productName,
+          item.lastMessageText,
+        ].join(" "),
+      );
+
+      return searchable.includes(keyword);
+    });
+  }, [items, query, filter]);
 
   return (
     <aside className="flex h-full min-h-[360px] flex-col border-r border-white/10 bg-[#11161a]">
@@ -44,6 +76,53 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
         <p className="mt-1 text-xs text-slate-500">
           Hội thoại mua bán trong HVACR Finder
         </p>
+      </div>
+
+      <div className="border-b border-white/10 px-4 py-3">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Tìm người mua, sản phẩm, tin nhắn..."
+          className="w-full rounded-2xl bg-white/[0.06] px-3 py-2 text-[13px] text-slate-200 outline-none placeholder:text-slate-500"
+        />
+
+        <div className="mt-3 flex gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setFilter("all")}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold ${
+              filter === "all"
+                ? "bg-sky-500 text-white"
+                : "bg-white/[0.06] text-slate-400"
+            }`}
+          >
+            Tất cả {counts.all}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter("unread")}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold ${
+              filter === "unread"
+                ? "bg-sky-500 text-white"
+                : "bg-white/[0.06] text-slate-400"
+            }`}
+          >
+            Chưa đọc {counts.unread}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter("online")}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-bold ${
+              filter === "online"
+                ? "bg-sky-500 text-white"
+                : "bg-white/[0.06] text-slate-400"
+            }`}
+          >
+            Online {counts.online}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -55,63 +134,22 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
 
         {error && <div className="px-4 py-5 text-sm text-red-300">{error}</div>}
 
-        {!isLoading && !error && channels.length === 0 && (
+        {!isLoading && !error && visibleItems.length === 0 && (
           <div className="px-4 py-5 text-sm leading-6 text-slate-500">
-            Chưa có cuộc trò chuyện nào.
+            Không tìm thấy hội thoại phù hợp.
           </div>
         )}
 
         {!isLoading &&
           !error &&
-          channels.map((channel) => {
-            const product = getProductSnapshotFromChannel(channel);
-            const unread = getUnread(channel);
-            const isActive = activeChannelId === channel.id;
-
-            return (
-              <button
-                key={channel.cid}
-                type="button"
-                onClick={() => onSelectChannel?.(channel)}
-                className={`flex w-full gap-3 border-b border-white/5 px-4 py-3 text-left transition ${
-                  isActive ? "bg-sky-500/10" : "hover:bg-white/[0.04]"
-                }`}
-              >
-                <img
-                  src={product.productImage || "/demo-compressor.jpeg"}
-                  alt={product.productName}
-                  className="h-12 w-12 shrink-0 rounded-2xl bg-white object-contain p-1"
-                />
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="line-clamp-1 text-[14px] font-black text-white">
-                      {product.productName}
-                    </p>
-                    <span className="shrink-0 text-[11px] text-slate-500">
-                      {formatTime(channel)}
-                    </span>
-                  </div>
-
-                  <p className="mt-0.5 line-clamp-1 text-[12px] text-slate-500">
-                    {product.sellerName}
-                  </p>
-
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <p className="line-clamp-1 text-[12px] text-slate-400">
-                      {getLastMessage(channel)}
-                    </p>
-
-                    {unread > 0 && (
-                      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-sky-500 px-1.5 text-[11px] font-black text-white">
-                        {unread}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+          visibleItems.map((item) => (
+            <InboxItem
+              key={item.channel.cid}
+              item={item}
+              isActive={activeChannelId === item.channel.id}
+              onSelect={onSelectChannel}
+            />
+          ))}
       </div>
     </aside>
   );
