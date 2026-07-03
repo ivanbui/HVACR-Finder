@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Channel } from "stream-chat";
 import { useChat } from "../hooks/useChat";
 import { useInbox } from "../hooks/useInbox";
@@ -9,6 +9,7 @@ import { InboxItem } from "./InboxItem";
 
 type InboxProps = {
   activeChannelId?: string;
+  refreshKey?: number;
   onSelectChannel?: (channel: Channel) => void;
 };
 
@@ -21,12 +22,20 @@ function normalizeText(value: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
+export function Inbox({
+  activeChannelId,
+  refreshKey = 0,
+  onSelectChannel,
+}: InboxProps) {
   const { currentUser } = useChat();
-  const { channels, isLoading, error } = useInbox();
+  const { channels, isLoading, error, refresh } = useInbox();
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
+
+  useEffect(() => {
+    refresh();
+  }, [refreshKey, refresh]);
 
   const items = useMemo(() => {
     if (!currentUser) return [];
@@ -54,15 +63,10 @@ export function Inbox({ activeChannelId, onSelectChannel }: InboxProps) {
         (filter === "online" && item.isOnline);
 
       if (!matchFilter) return false;
-
       if (!keyword) return true;
 
       const searchable = normalizeText(
-        [
-          item.otherUserName,
-          item.productName,
-          item.lastMessageText,
-        ].join(" "),
+        [item.otherUserName, item.productName, item.lastMessageText].join(" "),
       );
 
       return searchable.includes(keyword);

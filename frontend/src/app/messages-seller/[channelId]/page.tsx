@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import type { Channel } from "stream-chat";
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   ChatProvider,
   Conversation,
@@ -18,6 +18,9 @@ const sellerUser = getSellerTestUser();
 function SellerMessageDetailScreen() {
   const params = useParams<{ channelId: string }>();
   const channelId = params.channelId;
+  const router = useRouter();
+
+  const [readRefreshKey, setReadRefreshKey] = useState(0);
 
   const { channel, isLoading, error } = useChannelById(channelId);
 
@@ -51,7 +54,15 @@ function SellerMessageDetailScreen() {
     <main className="min-h-screen bg-[#0f1316] text-white">
       <section className="mx-auto flex h-screen max-w-5xl overflow-hidden border-x border-white/10">
         <div className="hidden w-[340px] shrink-0 md:block">
-          <Inbox activeChannelId={channel.id} />
+          <Inbox
+            activeChannelId={channel.id}
+            refreshKey={readRefreshKey}
+            onSelectChannel={(nextChannel) => {
+              if (nextChannel.id) {
+                router.push(`/messages-seller/${nextChannel.id}`);
+              }
+            }}
+          />
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -61,7 +72,11 @@ function SellerMessageDetailScreen() {
             isOnline={isOnline}
           />
 
-          <Conversation channel={channel as Channel} currentUserId={sellerUser.id} />
+          <Conversation
+            channel={channel}
+            currentUserId={sellerUser.id}
+            onRead={() => setReadRefreshKey((value) => value + 1)}
+          />
         </div>
       </section>
     </main>

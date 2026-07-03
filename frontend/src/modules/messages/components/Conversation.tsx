@@ -18,9 +18,14 @@ type UiMessage = {
 type ConversationProps = {
   channel: Channel;
   currentUserId: string;
+  onRead?: () => void;
 };
 
-export function Conversation({ channel, currentUserId }: ConversationProps) {
+export function Conversation({
+  channel,
+  currentUserId,
+  onRead,
+}: ConversationProps) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -30,8 +35,18 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
     currentUserId,
   });
 
+  async function markRead() {
+    try {
+      await channel.markRead();
+      onRead?.();
+    } catch {
+      // ignore mark read errors
+    }
+  }
+
   useEffect(() => {
     setMessages((channel.state.messages || []) as UiMessage[]);
+    markRead();
 
     const handleNewMessage = (event: { message?: MessageResponse }) => {
       if (!event.message) return;
@@ -42,6 +57,10 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
 
         return [...prev, event.message as UiMessage];
       });
+
+      if (event.message.user?.id !== currentUserId) {
+        markRead();
+      }
     };
 
     channel.on("message.new", handleNewMessage);
@@ -49,7 +68,8 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
     return () => {
       channel.off("message.new", handleNewMessage);
     };
-  }, [channel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel, currentUserId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -63,6 +83,8 @@ export function Conversation({ channel, currentUserId }: ConversationProps) {
       await channel.sendMessage({
         text,
       });
+
+      await markRead();
     } finally {
       setIsSending(false);
     }

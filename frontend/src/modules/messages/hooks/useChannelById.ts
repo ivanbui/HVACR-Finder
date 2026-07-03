@@ -21,7 +21,12 @@ export function useChannelById(channelId: string) {
         setError(null);
 
         const nextChannel = client.channel("messaging", channelId);
-        await nextChannel.watch({ presence: true });
+        await nextChannel.watch({
+          presence: true,
+          watchers: {
+            limit: 10,
+          },
+        });
 
         if (mounted) {
           setChannel(nextChannel);

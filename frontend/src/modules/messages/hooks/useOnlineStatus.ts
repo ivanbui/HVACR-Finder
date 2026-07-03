@@ -9,22 +9,15 @@ type UseOnlineStatusParams = {
   currentUserId: string;
 };
 
-function getOtherMemberId(channel: Channel | null, currentUserId: string) {
-  if (!channel?.state?.members) return "";
-
-  const members = Object.values(channel.state.members);
+function getOtherUserId(channel: Channel, currentUserId: string) {
+  const members = Object.values(channel.state.members || {});
   const other = members.find((member) => member.user?.id !== currentUserId);
-
   return other?.user?.id || "";
 }
 
-function getMemberOnline(channel: Channel | null, userId: string) {
-  if (!channel?.state?.members || !userId) return false;
-
-  const members = Object.values(channel.state.members);
-  const member = members.find((item) => item.user?.id === userId);
-
-  return Boolean(member?.user?.online);
+function isUserWatching(channel: Channel, userId: string) {
+  const watchers = Object.values(channel.state.watchers || {});
+  return watchers.some((watcher) => watcher.id === userId);
 }
 
 export function useOnlineStatus({
@@ -35,31 +28,41 @@ export function useOnlineStatus({
   const [isOnline, setIsOnline] = useState(false);
 
   useEffect(() => {
-    if (!channel) {
+    if (!client || !channel) {
       setIsOnline(false);
       return;
     }
 
-    const otherMemberId = getOtherMemberId(channel, currentUserId);
+    const otherUserId = getOtherUserId(channel, currentUserId);
 
     function refreshOnline() {
-      setIsOnline(getMemberOnline(channel, otherMemberId));
+      if (!channel || !otherUserId) {
+        setIsOnline(false);
+        return;
+      }
+
+      const watching = isUserWatching(channel, otherUserId);
+      const userOnline = Boolean(client?.state.users[otherUserId]?.online);
+
+      setIsOnline(watching || userOnline);
     }
 
     refreshOnline();
 
-    if (!client) return;
-
     client.on("user.presence.changed", refreshOnline);
     client.on("connection.changed", refreshOnline);
+    channel.on("user.watching.start", refreshOnline);
+    channel.on("user.watching.stop", refreshOnline);
+    channel.on("member.updated", refreshOnline);
 
     return () => {
       client.off("user.presence.changed", refreshOnline);
       client.off("connection.changed", refreshOnline);
+      channel.off("user.watching.start", refreshOnline);
+      channel.off("user.watching.stop", refreshOnline);
+      channel.off("member.updated", refreshOnline);
     };
   }, [client, channel, currentUserId]);
 
-  return {
-    isOnline,
-  };
+  return { isOnline };
 }
